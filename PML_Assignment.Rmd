@@ -23,11 +23,11 @@ suppressWarnings(library(randomForest))
 Loading of the dataset and analyzing it reveals the following.
 
 ```{r echo=FALSE,cache=TRUE}
-#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv","data/pml-training.csv")
-#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv","data/pml-testing.csv")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv","data/pml-training.csv")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv","data/pml-testing.csv")
 
-trainData <- read.csv("/Users/mvasishta/Documents/R-workspace/PML/data/pml-training.csv")
-testData <- read.csv("/Users/mvasishta/Documents/R-workspace/PML/data/pml-testing.csv")
+trainData <- read.csv("data/pml-training.csv")
+testData <- read.csv("data/pml-testing.csv")
 ```
 
 - Training data has 19622 observations with 160 variables

@@ -1,0 +1,101 @@
+---
+title: "Practical Machine Learning - Assignment"
+author: "Manjunath Vasishta"
+date: "1/29/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+suppressWarnings(library(dplyr))
+suppressWarnings(library(caret))
+suppressWarnings(library(randomForest))
+```
+
+## Overview
+
+- The goal of this assignment is to analyze the Human Activity Recognition(HAR) dataset obtained from "http://groupware.les.inf.puc-rio.br/har".  
+- The dataset has a "classe" variable which provides details on the manner in which exercise was done by participants (Sitting, Sitting down, Standing, Standing up, Walking).
+- The assignment requires analyzing the training dataset obtained from "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv".  
+- Machine learning model is built, analyzed and applied to predict the "classe" variable for the testing dataset present in "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv". 
+
+## Preprocessing
+
+Loading of the dataset and analyzing it reveals the following.
+
+```{r echo=FALSE,cache=TRUE}
+#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv","data/pml-training.csv")
+#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv","data/pml-testing.csv")
+
+trainData <- read.csv("/Users/mvasishta/Documents/R-workspace/PML/data/pml-training.csv")
+testData <- read.csv("/Users/mvasishta/Documents/R-workspace/PML/data/pml-testing.csv")
+```
+
+- Training data has 19622 observations with 160 variables
+- Test data has 20 observations with 160 variables
+
+```{r echo=FALSE}
+trainData <- trainData[,colSums(is.na(trainData)) == 0]
+testData <- testData[,colSums(is.na(testData)) == 0]
+testData <- testData[,-60]
+
+classe <- trainData$classe
+trainData <- trainData[,names(testData)]
+trainData$classe <- classe
+
+trainData <- select(trainData, -X, -user_name, -raw_timestamp_part_1,-raw_timestamp_part_2,-new_window,-num_window,-cvtd_timestamp)  
+testData <- select(testData, -X, -user_name, -raw_timestamp_part_1,-raw_timestamp_part_2,-new_window,-num_window,-cvtd_timestamp)  
+
+```
+
+Excluding the variables which has missing data(values with "NA"),  the dataset gets reduced.
+
+- Training data has 93 variables
+- Testing data has 60 variables
+
+Excluding the variables which are not measurements (X,user_name,raw_timestamp_part_1,raw_timestamp_part_2,new_window,num_window,cvtd_timestamp, problem_id)
+
+- Training data has 86 variables
+- Testing data has 52 variables
+
+To build the model and analyze, we only need to consider 52 variables from test data. These are the only variable that we can use in prediction.
+
+## Model
+
+Since there are many predictor variables and the outcome("classe") is a classification, we will need to use CART model. The best way to predict is by bootstrapping samples, growing multiple trees and using voting method which is all encompassed in Random Forest model.  To avoid overfitting, we also need to use cross validation.  
+
+Training data is split into training(60%) and validation(40%).  This will help us in train the model and validate.
+
+```{r echo=FALSE,cache=TRUE}
+inTrain <- createDataPartition(trainData$classe,p=0.60,list=FALSE)
+
+inTrainData <- trainData[inTrain,]
+inValData <- trainData[-inTrain,]
+
+controlRf <- trainControl(method="cv", 5,allowParallel = TRUE)
+modelRf <- train(classe ~ ., data=inTrainData, method="rf",trControl=controlRf,ntree=150)
+
+pred <- predict(modelRf,inValData[,-53])
+```
+
+After experimenting with models, it is found that having 5-fold cross validation, accuracy is improved to 99.17% when applied against validation data as indicated in confusion matrix below.
+
+```{r echo=TRUE}
+confusionMatrix(inValData$classe,pred)$table
+confusionMatrix(inValData$classe,pred)$overall
+```
+
+Final model selected has the following output
+
+```{r echo=TRUE}
+print(modelRf$finalModel)
+```
+
+Out of bag error rate is 0.99%.  
+
+```{r echo=TRUE}
+plot(modelRf$finalModel)
+```
+
+The plot reveals that accuracy of the model does not increase much with number of trees. It performs optimal at about 100 trees.
+
+Finally, this model is applied on the test data to predict the final outcome.
